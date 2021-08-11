@@ -277,7 +277,7 @@ class CoinMarketCapResponse(Investment):
                 "start":   "1",
                 "limit":   self.coins,
                 "convert": self.currency,
-                "slug":    ",".join([n.lower() for n in self.name])
+                # "slug":    ",".join([n.lower() for n in self.name])
             }
 
             headers = {
@@ -288,6 +288,7 @@ class CoinMarketCapResponse(Investment):
 
             session = Session()
             session.headers.update(headers)
+            # response = session.get(url, params=parameters)
 
             session_get_switch = {
                 "listings/latest": lambda : session.get(self.url, params={k: parameters[k] for k in ["start", "limit", "convert"]}),
