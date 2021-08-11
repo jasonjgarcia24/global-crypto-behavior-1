@@ -12,6 +12,7 @@ from dotenv   import load_dotenv
 from requests import Request, Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 from utils.timezone import get_et_datetime, get_et_pd_timestamp
+from os.path import expanduser as ospath
 
 
 class Investment:
@@ -182,7 +183,7 @@ class CoinMarketCapResponse(Investment):
         
     URL_SWITCH = {
         "NO":      f"https://pro-api.coinmarketcap.com{QUERY}",
-        "YES":     r"C:\Users\JasonGarcia24\FINTECH-WORKSPACE\global-crypto-behavior\data\debug_data.json",
+        "YES":     ospath(r"~/Desktop/Fintech_workspace/Challenge_Homeworks/Global-Crypto-behavior/data/debug_data.json"),
         "SANDBOX": f"https://sandbox-api.coinmarketcap.com{QUERY}",
     }
 
@@ -261,7 +262,7 @@ class CoinMarketCapResponse(Investment):
             return None
 
         df = pd.DataFrame(self.response["data"])
-        breakpoint()
+       
         
         self.dataframe = df.loc[df["name"].isin(self.name), :]
 
@@ -296,7 +297,7 @@ class CoinMarketCapResponse(Investment):
             }
 
             try:
-                breakpoint()
+                
                 response = session_get_switch.get(self.endpoint)()
                 self._Investment__response = json.loads(response.text)
             except (ConnectionError, Timeout, TooManyRedirects) as e:
