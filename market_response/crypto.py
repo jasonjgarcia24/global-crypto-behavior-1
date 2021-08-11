@@ -178,11 +178,12 @@ class Investment:
 
 
 class CoinMarketCapResponse(Investment):
-    QUERY = "/v1/cryptocurrency"
+    QUERY           = "/v1/cryptocurrency"
+    LOCAL_DATA_PATH = r"C:\Users\JasonGarcia24\FINTECH-WORKSPACE\global-crypto-behavior\data\debug_data.json"
         
     URL_SWITCH = {
         "NO":      f"https://pro-api.coinmarketcap.com{QUERY}",
-        "YES":     r"C:\Users\JasonGarcia24\FINTECH-WORKSPACE\global-crypto-behavior\data\debug_data.json",
+        "YES":     LOCAL_DATA_PATH,
         "SANDBOX": f"https://sandbox-api.coinmarketcap.com{QUERY}",
     }
 
@@ -261,9 +262,13 @@ class CoinMarketCapResponse(Investment):
             return None
 
         df = pd.DataFrame(self.response["data"])
-        breakpoint()
         
-        self.dataframe = df.loc[df["name"].isin(self.name), :]
+        df_switch_endpoint = {
+            "info":           lambda x: x,
+            "listing/latest": lambda x: x.loc[x["name"].isin(self.name), :],
+        }
+
+        self.dataframe = df_switch_endpoint.get(self.endpoint)(df)
 
     def dataframe(self):
         return self.dataframe
@@ -272,12 +277,15 @@ class CoinMarketCapResponse(Investment):
         # Using the Python requests library, make an API call to access the current
         # price of BTC
 
+        print(f"Source data : {self.URL_SWITCH.get('YES')}")
+        print(f"\tDEBUG : {self.debug.upper()}\n")
+
         if self.debug.upper() in ["NO", "SANDBOX"]:
             parameters = {
                 "start":   "1",
                 "limit":   self.coins,
                 "convert": self.currency,
-                # "slug":    ",".join([n.lower() for n in self.name])
+                "slug":    ",".join([n.lower() for n in self.name])
             }
 
             headers = {
@@ -288,7 +296,6 @@ class CoinMarketCapResponse(Investment):
 
             session = Session()
             session.headers.update(headers)
-            # response = session.get(url, params=parameters)
 
             session_get_switch = {
                 "listings/latest": lambda : session.get(self.url, params={k: parameters[k] for k in ["start", "limit", "convert"]}),
@@ -296,12 +303,12 @@ class CoinMarketCapResponse(Investment):
             }
 
             try:
-                breakpoint()
                 response = session_get_switch.get(self.endpoint)()
                 self._Investment__response = json.loads(response.text)
             except (ConnectionError, Timeout, TooManyRedirects) as e:
                 print(e)
         else:
+            print("")
             with open(self.URL_SWITCH.get("YES"), "r", encoding="utf-8") as f:
                 self._Investment__response = json.loads(f.read())
             
