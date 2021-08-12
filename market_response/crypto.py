@@ -302,7 +302,7 @@ class CoinMarketCapResponse(Investment):
 
             try:
                 response = session_get_switch.get(catch_endpoint_type)()
-                breakpoint()
+
                 self._Investment__response = json.loads(response.text)
             except (ConnectionError, Timeout, TooManyRedirects) as e:
                 print(e)
