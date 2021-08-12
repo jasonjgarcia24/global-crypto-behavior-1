@@ -16,11 +16,9 @@ coins    = 5000
 currency = "USD"
 endpoint = "latest-quotes"
 
-# debug = "YES" # Uses ../data/debug_datat.json (we want this for testing)
-debug = "NO"  # !!! Are you SURE???
+debug = "YES" # Uses ../data/debug_datat.json (we want this for testing)
+# debug = "NO"  # !!! Are you SURE???
 # debug = "SANDBOX"
 
 data = CoinMarketCapResponse(tickers, slugs, id, coins, currency, endpoint, debug=debug)
 
-print(data.dataframe.head())
-breakpoint()
