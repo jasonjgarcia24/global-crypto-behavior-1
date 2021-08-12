@@ -1,5 +1,6 @@
 # Import the required libraries and dependencies
 import os
+import urllib
 import requests
 import json
 import functools
@@ -10,9 +11,10 @@ from requests import Request, Session
 from datetime import datetime
 from dotenv   import load_dotenv
 from requests import Request, Session
+
+from collections.abc     import Iterable
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
-from utils.timezone import get_et_datetime, get_et_pd_timestamp
-from os.path import expanduser as ospath
+from utils.timezone      import get_et_datetime, get_et_pd_timestamp
 
 
 class Investment:
@@ -25,11 +27,12 @@ class Investment:
     }
     INVESTMENT_TYPES_STR = "|".join(INVESTMENT_TYPES.keys())
 
-    def __init__(self, ticker: str, name: str, count: float,
+    def __init__(self, ticker: str, name: str, id: Iterable, count: float,
                  currency: str, portfolio: str, time_format: str,
                  debug="NO"):
         self.ticker      = ticker
         self.name        = name
+        self.id          = id
         self.__count     = count
         self.currency    = currency
         self.portfolio   = portfolio
@@ -179,24 +182,19 @@ class Investment:
 
 
 class CoinMarketCapResponse(Investment):
-    QUERY = "/v1/cryptocurrency"
+    LOCAL_DATA_PATH = os.path.join(os.getcwd(), "data", "debug_data.json")
         
     URL_SWITCH = {
-        "NO":      f"https://pro-api.coinmarketcap.com{QUERY}",
-        "YES":     ospath(r"~/Desktop/Fintech_workspace/Challenge_Homeworks/Global-Crypto-behavior/data/debug_data.json"),
-        "SANDBOX": f"https://sandbox-api.coinmarketcap.com{QUERY}",
+        "NO":      "https://pro-api.coinmarketcap.com",
+        "YES":     LOCAL_DATA_PATH,
+        "SANDBOX": "https://sandbox-api.coinmarketcap.com",
     }
 
-    def __init__(self, ticker: str, name: str, coins: float, currency: str, endpoint: str,
-                 make_request=False, debug="NO"):
-        super().__init__(ticker, name, coins, currency,
-                         "cryptocurrency wallet", "%a, %Y-%b-%d %H:%M:%S (%Z)",
-                         debug)
+    def __init__(self, ticker: str, name: str, id: Iterable, coins: float, currency: str, endpoint: str, debug="NO"):
+        super().__init__(ticker, name, id, coins, currency, "cryptocurrency wallet", "%a, %Y-%b-%d %H:%M:%S (%Z)", debug)
 
-        self.endpoint = endpoint
-
-        if make_request:
-            self.request()
+        self.__endpoint = self.config(endpoint=endpoint)
+        self.request()
 
     @property
     def coins(self):
@@ -205,14 +203,6 @@ class CoinMarketCapResponse(Investment):
     @property
     def response(self):
         return self._Investment__response
-
-    @property
-    def id(self):
-        # Navigate the crypto response object to access the id of crypto
-        if not self.response:
-            return None
-
-        return list(self.response["data"].keys())[0]
 
     @property
     def collection_time(self):
@@ -251,7 +241,7 @@ class CoinMarketCapResponse(Investment):
     @property
     def url(self):
         # The Free Crypto API Call endpoint URL for the held cryptocurrency assets
-        return f"{self.URL_SWITCH.get(self.debug.upper())}/{self.endpoint}"
+        return f"{self.URL_SWITCH.get(self.debug.upper())}/{self.__endpoint['endpoint_url']}"
 
     @property
     def debug(self):
@@ -262,9 +252,14 @@ class CoinMarketCapResponse(Investment):
             return None
 
         df = pd.DataFrame(self.response["data"])
-       
         
-        self.dataframe = df.loc[df["name"].isin(self.name), :]
+        df_switch_endpoint = {
+            "info":            lambda x: x,
+            "latest-listings": lambda x: x.loc[x["id"].map(str).isin(self.id), :],
+            "latest-quotes":   lambda x: x,
+        }
+
+        self.dataframe = df_switch_endpoint.get(self.__endpoint["endpoint_type"])(df)
 
     def dataframe(self):
         return self.dataframe
@@ -273,36 +268,47 @@ class CoinMarketCapResponse(Investment):
         # Using the Python requests library, make an API call to access the current
         # price of BTC
 
+        print(f"Source data : {self.URL_SWITCH.get('YES')}")
+        print(f"\tDEBUG : {self.debug.upper()}\n")
+
+        # Set read params and credentials
+        parameters = {
+            "start":   "1",
+            "limit":   self.coins,
+            "convert": self.currency,
+            "slug":    ",".join([n.lower() for n in self.name]),
+            "id":      ",".join(self.id),
+        }
+
+        headers = {
+            "Accepts":           "application/json",
+            "Accept-Encoding":   "deflate, gzip",
+            "X-CMC_PRO_API_KEY": os.getenv("X-CMC_PRO_API_KEY"),
+        }
+
+        # Set url request
+        session_get_switch = {
+            "metadata":        lambda : session.get(self.url, params={k: parameters[k] for k in ["slug",]}),
+            "latest-listings": lambda : session.get(self.url, params={k: parameters[k] for k in ["start", "limit", "convert"]}),
+            "latest-quotes":   lambda : session.get(self.url, params={k: parameters[k] for k in ["id"]})
+        }
+
+        catch_endpoint_type = self.__endpoint["endpoint_type"]
+
         if self.debug.upper() in ["NO", "SANDBOX"]:
-            parameters = {
-                "start":   "1",
-                "limit":   self.coins,
-                "convert": self.currency,
-                # "slug":    ",".join([n.lower() for n in self.name])
-            }
-
-            headers = {
-                "Accepts": "application/json",
-                "Accept-Encoding": "deflate, gzip",
-                "X-CMC_PRO_API_KEY": os.getenv("X-CMC_PRO_API_KEY"),
-            }
-
+            # Get CoinMarketCap Response
             session = Session()
             session.headers.update(headers)
-            # response = session.get(url, params=parameters)
-
-            session_get_switch = {
-                "listings/latest": lambda : session.get(self.url, params={k: parameters[k] for k in ["start", "limit", "convert"]}),
-                "info":            lambda : session.get(self.url, params={k: parameters[k] for k in ["slug",]})
-            }
 
             try:
-                
-                response = session_get_switch.get(self.endpoint)()
+                response = session_get_switch.get(catch_endpoint_type)()
+
                 self._Investment__response = json.loads(response.text)
             except (ConnectionError, Timeout, TooManyRedirects) as e:
                 print(e)
         else:
+            # Get Saved Data
+            print("")
             with open(self.URL_SWITCH.get("YES"), "r", encoding="utf-8") as f:
                 self._Investment__response = json.loads(f.read())
             
@@ -310,3 +316,39 @@ class CoinMarketCapResponse(Investment):
 
     def print_json_dump(self):
         print(json.dumps(self.response, indent=4, sort_keys=True))
+
+    @staticmethod
+    def config(endpoint=None):
+
+        outvars = {
+            "endpoint_prefix": "v1/cryptocurrency/",        
+        }
+
+        endpoint_switch  = {
+            "cmc-id":                  "map",
+            "metadata":                "info",
+            "latest-listings":         "listings/latest",
+            "historical-listings":     "listings/historical",
+            "latest-quotes":           "quotes/latest",
+            "historical-quotes":       "quotes/historical",
+            "latest-market-pairs":     "market-pairs/latest",
+            "latest-ohlcv":            "ohlcv/latest",
+            "historical-ohlcv":        "ohlcv/historical",
+            "price-performance-stats": "price-performance-stats/latest",
+        }
+
+        def endpoint_error(var, switch):
+            raise AssertionError(f"Using 'endpoint' of value '{var}' is not supported.\n"
+                f"\tOnly: {list(switch.keys())}")
+
+        if endpoint:
+            if endpoint in endpoint_switch.keys():
+                endpoint_suffix = endpoint_switch.get(endpoint)
+                endpoint_url    = urllib.parse.urljoin(outvars["endpoint_prefix"], endpoint_suffix)
+                outvars = {**outvars, **{"endpoint_url": endpoint_url, "endpoint_suffix": endpoint_suffix, "endpoint_type": endpoint}}
+            else:
+                endpoint_error(endpoint, endpoint_switch)
+
+        return outvars
+
+        
