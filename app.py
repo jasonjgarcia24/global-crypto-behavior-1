@@ -14,11 +14,12 @@ cryptocurrencies = {
 slugs, tickers, id = list(zip(*[[x, y, z] for x, (y, z) in cryptocurrencies.items()]))
 coins    = 5000
 currency = "USD"
-endpoint = "latest-quotes"
+endpoint = "latest-listings"
 
-debug = "YES" # Uses ../data/debug_datat.json (we want this for testing)
+# debug = "YES" # Uses ../data/debug_datat.json (we want this for testing)
 # debug = "NO"  # !!! Are you SURE???
-# debug = "SANDBOX"
+debug = "SANDBOX"
 
 data = CoinMarketCapResponse(tickers, slugs, id, coins, currency, endpoint, debug=debug)
 
+breakpoint()

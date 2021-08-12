@@ -197,7 +197,7 @@ class CoinMarketCapResponse(Investment):
     def __init__(self, ticker: str, name: str, id: Iterable, coins: float, currency: str, endpoint: str, debug="NO"):
         super().__init__(ticker, name, id, coins, currency, "cryptocurrency wallet", "%a, %Y-%b-%d %H:%M:%S (%Z)", debug)
 
-        self.__endpoint = self.config(endpoint=endpoint)
+        self.__endpoint = self.__config(endpoint=endpoint)
         self.request()
 
     @property
@@ -267,7 +267,7 @@ class CoinMarketCapResponse(Investment):
         
         df_switch_endpoint = {
             "info":            lambda x: x,
-            "latest-listings": lambda x: x.loc[x["id"].map(str).isin(self.id), :],
+            "latest-listings": lambda x: x.loc[x["id"].map(str).isin(self.id), :] if self.debug != "SANDBOX" else x,
             "latest-quotes":   lambda x: x.T.reset_index(),
         }
 
@@ -333,7 +333,7 @@ class CoinMarketCapResponse(Investment):
         print(json.dumps(self.response, indent=4, sort_keys=True))
 
     @staticmethod
-    def config(endpoint=None):
+    def __config(endpoint=None):
 
         outvars = {
             "endpoint_prefix": "v1/cryptocurrency/",        
