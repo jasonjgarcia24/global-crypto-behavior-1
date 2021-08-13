@@ -182,18 +182,22 @@ class Investment:
 
 
 class CoinMarketCapResponse(Investment):
-    LOCAL_DATA_PATH = os.path.join(os.getcwd(), "data", "debug_data.json")
+    DEBUG_FILE = {
+            "metadata":        "debug_metadata_data.json",
+            "latest-listings": "debug_latest-listing_data.json",
+            "latest-quotes":   "debug_latest-quotes_data.json",
+        }
         
     URL_SWITCH = {
         "NO":      "https://pro-api.coinmarketcap.com",
-        "YES":     LOCAL_DATA_PATH,
+        "YES":     os.path.join(os.getcwd(), "data"),
         "SANDBOX": "https://sandbox-api.coinmarketcap.com",
     }
 
     def __init__(self, ticker: str, name: str, id: Iterable, coins: float, currency: str, endpoint: str, debug="NO"):
         super().__init__(ticker, name, id, coins, currency, "cryptocurrency wallet", "%a, %Y-%b-%d %H:%M:%S (%Z)", debug)
 
-        self.__endpoint = self.config(endpoint=endpoint)
+        self.__endpoint = self.__config(endpoint=endpoint)
         self.request()
 
     @property
@@ -241,7 +245,15 @@ class CoinMarketCapResponse(Investment):
     @property
     def url(self):
         # The Free Crypto API Call endpoint URL for the held cryptocurrency assets
-        return f"{self.URL_SWITCH.get(self.debug.upper())}/{self.__endpoint['endpoint_url']}"
+        debug_type = self.debug.upper()
+        domain     = self.URL_SWITCH.get(debug_type)
+
+        if debug_type == "YES":
+            endpoint = f"debug_{self.__endpoint['endpoint_type']}_data.json"
+            return os.path.join(domain, endpoint)
+        else:
+            endpoint = self.__endpoint["endpoint_url"]
+            return urllib.parse.urljoin(domain, endpoint)
 
     @property
     def debug(self):
@@ -255,11 +267,12 @@ class CoinMarketCapResponse(Investment):
         
         df_switch_endpoint = {
             "info":            lambda x: x,
-            "latest-listings": lambda x: x.loc[x["id"].map(str).isin(self.id), :],
-            "latest-quotes":   lambda x: x,
+            "latest-listings": lambda x: x.loc[x["id"].map(str).isin(self.id), :] if self.debug != "SANDBOX" else x,
+            "latest-quotes":   lambda x: x.T.reset_index(),
         }
 
-        self.dataframe = df_switch_endpoint.get(self.__endpoint["endpoint_type"])(df)
+        endpoint_type  = self.__endpoint["endpoint_type"]
+        self.dataframe = df_switch_endpoint.get(endpoint_type)(df)
 
     def dataframe(self):
         return self.dataframe
@@ -268,8 +281,8 @@ class CoinMarketCapResponse(Investment):
         # Using the Python requests library, make an API call to access the current
         # price of BTC
 
-        print(f"Source data : {self.URL_SWITCH.get('YES')}")
-        print(f"\tDEBUG : {self.debug.upper()}\n")
+        print(f"Source : {self.url}")
+        print(f"DEBUG : {self.debug.upper()}\n")
 
         # Set read params and credentials
         parameters = {
@@ -302,14 +315,16 @@ class CoinMarketCapResponse(Investment):
 
             try:
                 response = session_get_switch.get(catch_endpoint_type)()
-
                 self._Investment__response = json.loads(response.text)
             except (ConnectionError, Timeout, TooManyRedirects) as e:
                 print(e)
         else:
             # Get Saved Data
             print("")
-            with open(self.URL_SWITCH.get("YES"), "r", encoding="utf-8") as f:
+            fn      = f"debug_{catch_endpoint_type}_data.json"
+            full_fn = os.path.join(self.URL_SWITCH.get("YES"), fn)
+
+            with open(full_fn, "r", encoding="utf-8") as f:
                 self._Investment__response = json.loads(f.read())
             
         self.__set_dataframe()
@@ -318,7 +333,7 @@ class CoinMarketCapResponse(Investment):
         print(json.dumps(self.response, indent=4, sort_keys=True))
 
     @staticmethod
-    def config(endpoint=None):
+    def __config(endpoint=None):
 
         outvars = {
             "endpoint_prefix": "v1/cryptocurrency/",        
