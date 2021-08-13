@@ -13,7 +13,7 @@ from dotenv   import load_dotenv
 from requests import Request, Session
 
 from collections.abc     import Iterable
-from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
+from requests.exceptions import ConnectionError, Timeout, TooManyRedirects, ValueError
 from utils.timezone      import get_et_datetime, get_et_pd_timestamp
 
 
@@ -28,8 +28,7 @@ class Investment:
     INVESTMENT_TYPES_STR = "|".join(INVESTMENT_TYPES.keys())
 
     def __init__(self, ticker: str, name: str, id: Iterable, count: float,
-                 currency: str, portfolio: str, time_format: str,
-                 debug="NO"):
+                 currency: str, portfolio: str, time_format: str):
         self.ticker      = ticker
         self.name        = name
         self.id          = id
@@ -38,7 +37,6 @@ class Investment:
         self.portfolio   = portfolio
         self.time_format = time_format
         self.__response  = None
-        self.__debug     = debug
 
     @property
     def title(self):
@@ -186,18 +184,26 @@ class CoinMarketCapResponse(Investment):
             "metadata":        "debug_metadata_data.json",
             "latest-listings": "debug_latest-listing_data.json",
             "latest-quotes":   "debug_latest-quotes_data.json",
-        }
+    }
+
+    RUN_TYPE_OPTIONS = ["API", "DEBUG", "SANDBOX"]
         
     URL_SWITCH = {
-        "NO":      "https://pro-api.coinmarketcap.com",
-        "YES":     os.path.join(os.getcwd(), "data"),
+        "API":      "https://pro-api.coinmarketcap.com",
+        "DEBUG":     os.path.join(os.getcwd(), "data"),
         "SANDBOX": "https://sandbox-api.coinmarketcap.com",
     }
 
-    def __init__(self, ticker: str, name: str, id: Iterable, coins: float, currency: str, endpoint: str, debug="NO"):
-        super().__init__(ticker, name, id, coins, currency, "cryptocurrency wallet", "%a, %Y-%b-%d %H:%M:%S (%Z)", debug)
+    def __init__(self, ticker: str, name: str, id: Iterable, coins: float, currency: str, endpoint: str,
+                 save_response="NO", run_type="API"):
+        super().__init__(ticker, name, id, coins, currency, "cryptocurrency wallet", "%a, %Y-%b-%d %H:%M:%S (%Z)")
 
-        self.__endpoint = self.__config(endpoint=endpoint)
+        if run_type not in RUN_TYPE_OPTIONS:
+            raise ValueError(f"Variable 'run_type' must be one of the values in {RUN_TYPE_OPTIONS}. '{run_type}' is not valid.")
+
+        self.__run_type      = run_type
+        self.__endpoint      = self.__config(endpoint=endpoint)
+        self.__save_response = save_response
         self.request()
 
     @property
@@ -248,16 +254,12 @@ class CoinMarketCapResponse(Investment):
         debug_type = self.debug.upper()
         domain     = self.URL_SWITCH.get(debug_type)
 
-        if debug_type == "YES":
+        if debug_type == "DEBUG":
             endpoint = f"debug_{self.__endpoint['endpoint_type']}_data.json"
             return os.path.join(domain, endpoint)
         else:
             endpoint = self.__endpoint["endpoint_url"]
             return urllib.parse.urljoin(domain, endpoint)
-
-    @property
-    def debug(self):
-        return self._Investment__debug
 
     def __set_dataframe(self):
         if not self.response:
@@ -267,12 +269,19 @@ class CoinMarketCapResponse(Investment):
         
         df_switch_endpoint = {
             "info":            lambda x: x,
-            "latest-listings": lambda x: x.loc[x["id"].map(str).isin(self.id), :] if self.debug != "SANDBOX" else x,
+            "latest-listings": lambda x: x.loc[x["id"].map(str).isin(self.id), :] if self.__run_type != "SANDBOX" else x,
             "latest-quotes":   lambda x: x.T.reset_index(),
         }
 
         endpoint_type  = self.__endpoint["endpoint_type"]
         self.dataframe = df_switch_endpoint.get(endpoint_type)(df)
+
+    def __save_json(self):
+        breakpoint()
+        gh = 1
+
+        fn      = f"debug_{catch_endpoint_type}_data.json"
+        full_fn = os.path.join(self.URL_SWITCH.get("DEBUG"), fn)
 
     def dataframe(self):
         return self.dataframe
@@ -281,8 +290,9 @@ class CoinMarketCapResponse(Investment):
         # Using the Python requests library, make an API call to access the current
         # price of BTC
 
-        print(f"Source : {self.url}")
-        print(f"DEBUG : {self.debug.upper()}\n")
+        print(f"Source   : {self.url}")
+        print(f"RUN TYPE : {self.__run_type.upper()}")
+        print(f"SAVE     : {self.__save_response.upper()}\n")
 
         # Set read params and credentials
         parameters = {
@@ -308,26 +318,27 @@ class CoinMarketCapResponse(Investment):
 
         catch_endpoint_type = self.__endpoint["endpoint_type"]
 
-        if self.debug.upper() in ["NO", "SANDBOX"]:
+        if self.__run_type.upper() in ["API", "SANDBOX"]:
             # Get CoinMarketCap Response
             session = Session()
             session.headers.update(headers)
 
             try:
+                breakpoint()
                 response = session_get_switch.get(catch_endpoint_type)()
                 self._Investment__response = json.loads(response.text)
             except (ConnectionError, Timeout, TooManyRedirects) as e:
                 print(e)
         else:
             # Get Saved Data
-            print("")
             fn      = f"debug_{catch_endpoint_type}_data.json"
-            full_fn = os.path.join(self.URL_SWITCH.get("YES"), fn)
+            full_fn = os.path.join(self.URL_SWITCH.get("DEBUG"), fn)
 
             with open(full_fn, "r", encoding="utf-8") as f:
                 self._Investment__response = json.loads(f.read())
             
         self.__set_dataframe()
+        self.__save_json()
 
     def print_json_dump(self):
         print(json.dumps(self.response, indent=4, sort_keys=True))

@@ -20,4 +20,9 @@ endpoint = "latest-quotes"
 # debug = "SANDBOX" # Uses CMC sandbox and no credit.
 debug = "YES"     # Uses ../data/debug_datat.json (we want this for testing).
 
-data = CoinMarketCapResponse(tickers, slugs, id, coins, currency, endpoint, debug=debug)
+# save_response = "NO"     # Do not save dataframe as json.
+# save_response = "WRITE"  # Overwrite json file.
+save_response = "APPND" # Append to json file.
+
+data = CoinMarketCapResponse(tickers, slugs, id, coins, currency, endpoint,
+                             save_response=save_response, debug=debug)
