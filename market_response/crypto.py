@@ -114,9 +114,6 @@ class CoinMarketCapResponse(Investment):
             df_merged = pd.concat([df_prev, df_new], axis=0)
             df_merged.to_csv(filename)
 
-        breakpoint()
-
-
     def json_to_dataframe(self):
         # If defined, response will take precedence over self.response.
         if not self.response:
@@ -225,4 +222,3 @@ class CoinMarketCapResponse(Investment):
 
         return outvars
 
-        
