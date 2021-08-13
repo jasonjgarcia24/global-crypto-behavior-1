@@ -1,10 +1,58 @@
+import os
+import json
+
+from dotenv   import load_dotenv
+from requests import Session
+
+from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 
 
 class CryptoNewsResponse():
-    def __init__(self, ticker: str, endpoint: str, items=50, data_type="json", source=None, media_type=None,
-                 sentiment="both", date=None, time=None, run_type="API"):
-        self.ticker = ticker
-        self.endpoint = endpoint
+    URL_SWITCH = {
+        "API":     "https://cryptonews-api.com/api/v1",
+        "DEBUG":   os.path.join(os.getcwd(), "data"),
+        "ARCHIVE": os.path.join(os.getcwd(), "data"),
+    }
+
+    def __init__(self, ticker: str, items=2, endpoint="", rank_days=1, run_type="API"):
+        self.ticker    = ticker
+        self.items     = items
+        self.endpoint  = endpoint
+        self.rank_days = rank_days
+        self.run_type  = run_type
+        self.request()
+
+    @property
+    def url(self):
+        return self.URL_SWITCH["API"]
+
+    def request(self):
+        load_dotenv()        
+
+        # Set request credentialsa and params  
+        crypto_news_api_key = os.getenv("CRYPTO_NEWS_API_KEY")
+
+        parameters = {
+            "tickers":      ",".join(self.ticker),
+            "items":        self.items,
+            "sortby":       "rank",
+            "days":         self.rank_days,
+            "extra-fields": "id,eventid,rankscore",
+            "token":   crypto_news_api_key,
+        }
+
+        session = Session()
+
+        try:
+            response = session.get(self.url, params=parameters)
+            self.__response = json.loads(response.text)
+        except (ConnectionError, Timeout, TooManyRedirects) as e:
+            print(e)
+
+        breakpoint()
+
+    def print_json_dump(self):
+        print(json.dumps(self.__response, indent=4, sort_keys=True))
 
     @staticmethod
     def config():

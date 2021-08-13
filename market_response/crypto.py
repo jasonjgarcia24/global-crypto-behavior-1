@@ -2,20 +2,15 @@
 import os
 import re
 import urllib
-import requests
 import json
-import functools
 
 import pandas as pd
 
-from requests import Request, Session
-from datetime import datetime
 from dotenv   import load_dotenv
-from requests import Request, Session
+from requests import Session
 
 from collections.abc     import Iterable
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
-from utils.timezone      import get_et_datetime, get_et_pd_timestamp
 
 
 class Investment:
@@ -144,19 +139,19 @@ class CoinMarketCapResponse(Investment):
         print(f"Source   : {self.url}")
         print(f"RUN TYPE : {self.__run_type.upper()}")
 
-        # Set read params and credentials
+        # Set request credentialsa and params
+        headers = {
+            "Accepts":           "application/json",
+            "Accept-Encoding":   "deflate, gzip",
+            "X-CMC_PRO_API_KEY": os.getenv("X-CMC_PRO_API_KEY"),
+        }
+
         parameters = {
             "start":   "1",
             "limit":   self.coins,
             "convert": self.currency,
             "slug":    ",".join([n.lower() for n in self.name]),
             "id":      ",".join(self.id),
-        }
-
-        headers = {
-            "Accepts":           "application/json",
-            "Accept-Encoding":   "deflate, gzip",
-            "X-CMC_PRO_API_KEY": os.getenv("X-CMC_PRO_API_KEY"),
         }
 
         # Set url request
