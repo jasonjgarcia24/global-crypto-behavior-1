@@ -16,11 +16,8 @@ coins    = 5000
 currency = "USD"
 endpoint = "latest-quotes"
 
-# debug = "YES" # Uses ../data/debug_datat.json (we want this for testing)
-debug = "NO"  # !!! Are you SURE???
-# debug = "SANDBOX"
+# debug = "NO"      # !!! Uses CMC API key and credit. Are you SURE???
+# debug = "SANDBOX" # Uses CMC sandbox and no credit.
+debug = "YES"     # Uses ../data/debug_datat.json (we want this for testing).
 
 data = CoinMarketCapResponse(tickers, slugs, id, coins, currency, endpoint, debug=debug)
-
-print(data.dataframe.head())
-breakpoint()
