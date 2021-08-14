@@ -1,6 +1,8 @@
 import os
 import json
 
+import pandas as pd
+
 from dotenv   import load_dotenv
 from requests import Session
 
@@ -15,16 +17,35 @@ class CryptoNewsResponse():
     }
 
     def __init__(self, ticker: str, items=2, endpoint="", rank_days=1, run_type="API"):
-        self.ticker    = ticker
-        self.items     = items
-        self.endpoint  = endpoint
-        self.rank_days = rank_days
-        self.run_type  = run_type
+        self.ticker      = ticker
+        self.items       = items
+        self.endpoint    = endpoint
+        self.rank_days   = rank_days
+        self.__run_type  = run_type
         self.request()
 
     @property
+    def response(self):
+        return self.__response
+
+    @property
     def url(self):
-        return self.URL_SWITCH["API"]
+
+        if self.__run_type.upper() == "API":
+            return self.URL_SWITCH[self.__run_type]
+        else:
+            domain   = self.URL_SWITCH[self.__run_type]
+            endpoint = "debug_news-listings_data.json"
+            return os.path.join(domain, endpoint)
+
+    def json_to_dataframe(self):
+        if not self.response:
+            self.dataframe = None
+        else:        
+            self.dataframe = pd.DataFrame(self.response["data"])
+
+    def dataframe(self):
+        return self.dataframe    
 
     def request(self):
         load_dotenv()        
@@ -43,13 +64,22 @@ class CryptoNewsResponse():
 
         session = Session()
 
-        try:
-            response = session.get(self.url, params=parameters)
-            self.__response = json.loads(response.text)
-        except (ConnectionError, Timeout, TooManyRedirects) as e:
-            print(e)
+        if self.__run_type.upper() == "API":
+            # Get CryptoNews Response
+            session = Session()
+            session.headers.update(headers)
 
-        breakpoint()
+            try:
+                response = session.get(self.url, params=parameters)
+                self.__response = json.loads(response.text)
+            except (ConnectionError, Timeout, TooManyRedirects) as e:
+                print(e)
+        else:
+            # Get Saved Data
+            with open(self.url, "r", encoding="utf-8") as f:
+                self.__response = json.loads(f.read())
+
+        self.json_to_dataframe()
 
     def print_json_dump(self):
         print(json.dumps(self.__response, indent=4, sort_keys=True))
