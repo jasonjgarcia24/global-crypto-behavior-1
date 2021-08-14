@@ -104,10 +104,13 @@ class CoinMarketCapResponse(Investment):
 
         if mode == "w" or not os.path.isfile(filename):
             df_new.to_csv(filename)
+            df_merged = df_new
         else:
             df_prev = pd.read_csv(filename)
             df_merged = pd.concat([df_prev, df_new], axis=0)
             df_merged.to_csv(filename)
+
+        self.dataframe = df_merged
 
     def json_to_dataframe(self):
         # If defined, response will take precedence over self.response.
