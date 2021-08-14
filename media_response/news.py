@@ -1,6 +1,8 @@
 import os
 import json
 
+import pandas as pd
+
 from dotenv   import load_dotenv
 from requests import Session
 
@@ -10,21 +12,41 @@ from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 class CryptoNewsResponse():
     URL_SWITCH = {
         "API":     "https://cryptonews-api.com/api/v1",
+        "TICKER":  "https://cryptonews-api.com/api/v1/events",
         "DEBUG":   os.path.join(os.getcwd(), "data"),
         "ARCHIVE": os.path.join(os.getcwd(), "data"),
     }
 
     def __init__(self, ticker: str, items=2, endpoint="", rank_days=1, run_type="API"):
-        self.ticker    = ticker
-        self.items     = items
-        self.endpoint  = endpoint
-        self.rank_days = rank_days
-        self.run_type  = run_type
+        self.ticker      = ticker
+        self.items       = items
+        self.endpoint    = endpoint
+        self.rank_days   = rank_days
+        self.__run_type  = run_type
         self.request()
 
     @property
+    def response(self):
+        return self.__response
+
+    @property
     def url(self):
-        return self.URL_SWITCH["API"]
+
+        if self.__run_type.upper() == "API":
+            return self.URL_SWITCH[self.__run_type]
+        else:
+            domain   = self.URL_SWITCH[self.__run_type]
+            endpoint = "debug_news-listings_data.json"
+            return os.path.join(domain, endpoint)
+
+    def json_to_dataframe(self):
+        if not self.response:
+            self.dataframe = None
+        else:        
+            self.dataframe = pd.DataFrame(self.response["data"])
+
+    def dataframe(self):
+        return self.dataframe    
 
     def request(self):
         load_dotenv()        
@@ -32,8 +54,9 @@ class CryptoNewsResponse():
         # Set request credentialsa and params  
         crypto_news_api_key = os.getenv("CRYPTO_NEWS_API_KEY")
 
+
         parameters = {
-            "tickers":      ",".join(self.ticker),
+            "tickers":      self.ticker if isinstance(self.ticker, str) else ",".join(self.ticker),
             "items":        self.items,
             "sortby":       "rank",
             "days":         self.rank_days,
@@ -41,15 +64,23 @@ class CryptoNewsResponse():
             "token":   crypto_news_api_key,
         }
 
-        session = Session()
 
-        try:
-            response = session.get(self.url, params=parameters)
-            self.__response = json.loads(response.text)
-        except (ConnectionError, Timeout, TooManyRedirects) as e:
-            print(e)
+        if self.__run_type.upper() in ["API", "TICKER"]:
+            # Get CryptoNews Response
+            session = Session()
+            breakpoint()
 
-        breakpoint()
+            try:
+                response = session.get(self.url, params=parameters)
+                self.__response = json.loads(response.text)
+            except (ConnectionError, Timeout, TooManyRedirects) as e:
+                print(e)
+        else:
+            # Get Saved Data
+            with open(self.url, "r", encoding="utf-8") as f:
+                self.__response = json.loads(f.read())
+
+        self.json_to_dataframe()
 
     def print_json_dump(self):
         print(json.dumps(self.__response, indent=4, sort_keys=True))
