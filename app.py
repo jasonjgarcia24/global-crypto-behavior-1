@@ -1,11 +1,10 @@
+import pandas as pd
+
 from datetime import datetime
 
 from market_response.crypto import CoinMarketCapResponse
 from media_response.news    import CryptoNewsResponse
 
-
-# app_type = "ALL"
-app_type = "NEWS"
 
 cryptocurrencies = {
     "Bitcoin":  ("BTC", "1"),
@@ -31,6 +30,8 @@ crypto_data = CoinMarketCapResponse(tickers, slugs, id, coins, currency, endpoin
 
 crypto_data.combine_responses(mode="w", suffix="MANUAL-RUN")
 
-news_data = CryptoNewsResponse(tickers, items=20, endpoint="", rank_days=1,
-                                run_type=run_type)
-breakpoint()
+# run_type = "API"     # Uses ../data/debug_datat.json (we want this for testing).
+run_type = "DEBUG"     # Uses ../data/debug_datat.json (we want this for testing).
+
+news_data = CryptoNewsResponse(ticker, items=50, endpoint="", rank_days=1,
+                               run_type=run_type)

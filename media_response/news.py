@@ -12,6 +12,7 @@ from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 class CryptoNewsResponse():
     URL_SWITCH = {
         "API":     "https://cryptonews-api.com/api/v1",
+        "TICKER":  "https://cryptonews-api.com/api/v1/events",
         "DEBUG":   os.path.join(os.getcwd(), "data"),
         "ARCHIVE": os.path.join(os.getcwd(), "data"),
     }
@@ -53,8 +54,9 @@ class CryptoNewsResponse():
         # Set request credentialsa and params  
         crypto_news_api_key = os.getenv("CRYPTO_NEWS_API_KEY")
 
+
         parameters = {
-            "tickers":      ",".join(self.ticker),
+            "tickers":      self.ticker if isinstance(self.ticker, str) else ",".join(self.ticker),
             "items":        self.items,
             "sortby":       "rank",
             "days":         self.rank_days,
@@ -62,12 +64,11 @@ class CryptoNewsResponse():
             "token":   crypto_news_api_key,
         }
 
-        session = Session()
 
-        if self.__run_type.upper() == "API":
+        if self.__run_type.upper() in ["API", "TICKER"]:
             # Get CryptoNews Response
             session = Session()
-            session.headers.update(headers)
+            breakpoint()
 
             try:
                 response = session.get(self.url, params=parameters)
