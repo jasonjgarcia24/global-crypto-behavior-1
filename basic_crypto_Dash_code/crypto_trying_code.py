@@ -65,12 +65,12 @@ def update_map(option_slctd):
 # Plotly Express
     fig = px.choropleth(
         data_frame=crypto_copy,
-        locationmode='country names',
+        locationmode="USA-states",
         locations=['America','Nigeria','Philippines','China'],
-        scope= "world",
+        scope= "USA",
         color='transactions',
-        hover_data=['country', 'transactions'],
-        color_continuous_scale=px.colors.sequential.YlOrRd,
+        #hover_data=['country', 'transactions'],
+        #color_continuous_scale=px.colors.sequential.YlOrRd,
         labels={'transactions': 'number of exchanges'},
         template='plotly_dark'
     )
