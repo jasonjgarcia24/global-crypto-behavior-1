@@ -5,55 +5,78 @@ import pandas as pd
 
 from dotenv   import load_dotenv
 from requests import Session
+from datetime import datetime
+from pathlib  import Path
 
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 
 
 class CryptoNewsResponse():
-    URL_SWITCH = {
-        "API":     "https://cryptonews-api.com/api/v1",
-        "TICKER":  "https://cryptonews-api.com/api/v1/events",
-        "DEBUG":   os.path.join(os.getcwd(), "data"),
-        "ARCHIVE": os.path.join(os.getcwd(), "data"),
+    ARCHIVE_FILES = {
+        "ticker-news":   "ticker-news_data.csv",
+        "ticker-events": "ticker-events_data.csv",
     }
 
-    def __init__(self, ticker: str, items=2, endpoint="", rank_days=1, run_type="API"):
-        self.ticker      = ticker
-        self.items       = items
-        self.endpoint    = endpoint
-        self.rank_days   = rank_days
-        self.__run_type  = run_type
+    RUN_TYPE_OPTIONS = ["TICKER-NEWS", "TICKER-EVENTS", "DEBUG"]
+    SAVE_CSV_OPTIONS = [None, "a", "w"]
+
+    DOMAIN_SWITCH = {
+        "TICKER-NEWS":   "https://cryptonews-api.com/api/v1",
+        "TICKER-EVENTS": "https://cryptonews-api.com/api/v1/events",
+        "DEBUG":         os.path.join(os.getcwd(), "data"),
+    }
+
+    def __init__(self, ticker: str, endpoint: str, items=2, rank_days=1,
+                 run_type="TICKER-EVENTS", save_csv=None):
+
+        self.__catch_value_error(run_type, "run_type", self.RUN_TYPE_OPTIONS)
+        self.__catch_value_error(save_csv, "save_csv", self.SAVE_CSV_OPTIONS)
+
+        self.ticker     = ticker
+        self.items      = items
+        self.rank_days  = rank_days
+        self.__run_type = run_type
+        self.save_csv   = save_csv
+        self.__set_endpoint(endpoint)
         self.request()
+
+    @property
+    def url(self):
+        run_type     = self.__run_type
+        endpoint_tag = self.__endpoint
+        domain       = self.DOMAIN_SWITCH.get(run_type)
+        prefix       = run_type.lower()
+
+        run_type = self.__run_type
+        if run_type.upper() in ["TICKER-NEWS", "TICKER-EVENTS"]:
+            return domain
+        else:
+            endpoint = f"{prefix}_{self.ARCHIVE_FILES[endpoint_tag]}"
+            return os.path.join(domain, endpoint)
 
     @property
     def response(self):
         return self.__response
 
-    @property
-    def url(self):
-
-        if self.__run_type.upper() == "API":
-            return self.URL_SWITCH[self.__run_type]
-        else:
-            domain   = self.URL_SWITCH[self.__run_type]
-            endpoint = "debug_news-listings_data.json"
-            return os.path.join(domain, endpoint)
-
-    def json_to_dataframe(self):
-        if not self.response:
-            self.dataframe = None
-        else:        
-            self.dataframe = pd.DataFrame(self.response["data"])
-
     def dataframe(self):
-        return self.dataframe    
+        if not self.__response:
+            return None
+        else:
+            return self.dataframe
 
+    def __set_endpoint(self, endpoint_tag):
+        self.__endpoint = endpoint_tag
+    
     def request(self):
-        load_dotenv()        
+        # Using the Python requests library, make an API call to access Crypto News
+        # information.
 
-        # Set request credentialsa and params  
+        print(f"Source   : {self.url}")
+        print(f"RUN TYPE : {self.__run_type.upper()}")
+
+        # Set request credentialsa and params
+        load_dotenv()
         crypto_news_api_key = os.getenv("CRYPTO_NEWS_API_KEY")
-
 
         parameters = {
             "tickers":      self.ticker if isinstance(self.ticker, str) else ",".join(self.ticker),
@@ -64,26 +87,82 @@ class CryptoNewsResponse():
             "token":   crypto_news_api_key,
         }
 
-
-        if self.__run_type.upper() in ["API", "TICKER"]:
-            # Get CryptoNews Response
+        # Get CryptoNews Response:
+        if self.__run_type.upper() in ["TICKER-NEWS", "TICKER-EVENTS"]:
             session = Session()
-            breakpoint()
 
             try:
                 response = session.get(self.url, params=parameters)
                 self.__response = json.loads(response.text)
             except (ConnectionError, Timeout, TooManyRedirects) as e:
                 print(e)
-        else:
-            # Get Saved Data
-            with open(self.url, "r", encoding="utf-8") as f:
-                self.__response = json.loads(f.read())
 
-        self.json_to_dataframe()
+            self.dataframe = self.json_to_dataframe()
+        
+        # Get saved data:
+        else:
+            self.dataframe = pd.read_csv(Path(self.url))
+
+        # Save dataframe to csv.
+        if self.save_csv:
+            self.to_csv(mode=self.save_csv, suffix="auto")
+        
+    def json_to_dataframe(self):
+        if not self.response:
+            return None
+        else:        
+            return pd.DataFrame(self.response["data"])
+
+    def merge_df_responses(self, filename):
+        df_new    = self.dataframe
+        df_prev   = pd.read_csv(filename)
+        df_merged = pd.concat([df_prev, df_new], axis=0)
+
+        return df_merged
 
     def print_json_dump(self):
-        print(json.dumps(self.__response, indent=4, sort_keys=True))
+        print(json.dumps(self.response, indent=4, sort_keys=True))
+    
+    def to_csv(self, mode="a", suffix=""):
+        self.__catch_value_error(mode, "mode", [opt for opt in self.SAVE_CSV_OPTIONS if opt])
+
+        # Set to data archive domain: os.path.join(os.getcwd(), "data")
+        run_type = self.__run_type
+        domain   = self.DOMAIN_SWITCH.get("DEBUG")
+
+        # Archive (types: endpoints) can be:
+        # "ticker-news":   "ticker-news_data.csv",
+        # "ticker-events": "ticker-events_data.csv",
+        endpoint_tag = self.__endpoint
+        endpoint     = self.ARCHIVE_FILES[endpoint_tag]
+
+        # Modify endpoints to include suffix and date if mode == "w".
+        today         = "_" + datetime.now().strftime("%Y%m%d_%H%M%S")
+        prefix        = run_type.lower() + "_" if run_type == "DEBUG" else ""
+        endpoint, ext = os.path.splitext(endpoint)
+        suffix        = "" if not suffix else "_" + suffix
+        suffix        = suffix+today if mode=="w" else suffix
+        endpoint      = prefix + endpoint + suffix + ext
+
+        # Assign filename.
+        filename = os.path.join(domain, endpoint)
+
+        # If writing to file:
+        # Write to file.
+        if mode == "w" or not os.path.isfile(filename):
+            self.dataframe.to_csv(filename, index=False)
+
+        # If appending to file:
+        # Read the existing file, concatenate with new data, and write to file.
+        elif mode == "a":
+            self.dataframe = self.merge_df_responses(filename)
+            self.dataframe.to_csv(filename, index=False)
+            
+    @staticmethod
+    def __catch_value_error(var, varname, opts):
+        if var not in opts:
+            raise ValueError(f"Variable '{varname}' must be one of the values in {opts}." +
+                             f"'{var}' is not valid.")
 
     @staticmethod
     def config():
@@ -223,28 +302,37 @@ class CryptoNewsResponse():
         return outargs
 
     @staticmethod
-    def get_news_source_opts(): return list(CryptoNewsResponse.config()["news-source"].keys())
+    def get_news_source_opts():
+        return list(CryptoNewsResponse.config()["news-source"].keys())
 
     @staticmethod
-    def get_type_opts(): return list(CryptoNewsResponse.config()["type"].keys())
+    def get_type_opts():
+        return list(CryptoNewsResponse.config()["type"].keys())
 
     @staticmethod
-    def get_sentiment_bias_opts(): return list(CryptoNewsResponse.config()["sentiment-bias"].keys())
+    def get_sentiment_bias_opts():
+        return list(CryptoNewsResponse.config()["sentiment-bias"].keys())
 
     @staticmethod
-    def get_rank_opts(): return list(CryptoNewsResponse.config()["rank"].keys())
+    def get_rank_opts():
+        return list(CryptoNewsResponse.config()["rank"].keys())
 
     @staticmethod
-    def get_extra_fields_opts(): return list(CryptoNewsResponse.config()["extra-fields"].keys())
+    def get_extra_fields_opts():
+        return list(CryptoNewsResponse.config()["extra-fields"].keys())
 
     @staticmethod
-    def get_all_ticker_news_opts(): return list(CryptoNewsResponse.config()["all-ticker-news"].keys())
+    def get_all_ticker_news_opts():
+        return list(CryptoNewsResponse.config()["all-ticker-news"].keys())
 
     @staticmethod
-    def get_sentiment_analysis_opts(): return list(CryptoNewsResponse.config()["sentiment-analysis"].keys())
+    def get_sentiment_analysis_opts():
+        return list(CryptoNewsResponse.config()["sentiment-analysis"].keys())
 
     @staticmethod
-    def get_time_frame_opts(): return list(CryptoNewsResponse.config()["time-frame"].keys())
+    def get_time_frame_opts():
+        return list(CryptoNewsResponse.config()["time-frame"].keys())
 
     @staticmethod
-    def get_topic_opts(): return list(CryptoNewsResponse.config()["topics"].keys())
+    def get_topic_opts():
+        return list(CryptoNewsResponse.config()["topics"].keys())
