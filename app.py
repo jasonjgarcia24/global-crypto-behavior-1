@@ -37,4 +37,4 @@ news_df = pd.DataFrame()
 for ticker in tickers:
     news_data = CryptoNewsResponse(ticker, news_endpoint, items=items, rank_days=rank_days, run_type=run_type)
     news_df   = pd.concat([news_df, news_data.dataframe])
-
+    
