@@ -25,9 +25,7 @@ today        = datetime.now().strftime("%Y%m%d")
 run_type     = "DEBUG"          # Uses ../data/debug_<endpoint>_data.csv (we want this for testing).
 
 crypto_data = CoinMarketCapResponse(tickers, slugs, id, coins, currency, cmc_endpoint, run_type=run_type)
-crypto_data.to_csv(mode="a", suffix=today)
-
-crypto_df = crypto_data.dataframe
+crypto_df   = crypto_data.dataframe
 
 # CRYPTO NEWS SECTION
 items         = 50              # Pull 50 articles.
@@ -38,7 +36,5 @@ run_type      = "DEBUG"         # Uses ../data/debug_<endpoint>_data.csv (we wan
 news_df = pd.DataFrame()
 for ticker in tickers:
     news_data = CryptoNewsResponse(ticker, news_endpoint, items=items, rank_days=rank_days, run_type=run_type)
-    news_data.to_csv(mode="a", suffix=today)
-
-    news_df = pd.concat([news_df, news_data.dataframe])
+    news_df   = pd.concat([news_df, news_data.dataframe])
 
