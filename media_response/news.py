@@ -26,7 +26,7 @@ class CryptoNewsResponse():
         "DEBUG":         os.path.join(os.getcwd(), "data"),
     }
 
-    def __init__(self, ticker: str, endpoint: str, items=2, rank_days=1,
+    def __init__(self, ticker: str, endpoint: str, items=2, rank_days=1, search_str="",
                  run_type="TICKER-EVENTS", save_csv=None):
 
         self.__catch_value_error(run_type, "run_type", self.RUN_TYPE_OPTIONS)
@@ -35,6 +35,7 @@ class CryptoNewsResponse():
         self.ticker     = ticker
         self.items      = items
         self.rank_days  = rank_days
+        self.search_str = search_str
         self.__run_type = run_type
         self.save_csv   = save_csv
         self.__set_endpoint(endpoint)
@@ -84,7 +85,9 @@ class CryptoNewsResponse():
             "sortby":       "rank",
             "days":         self.rank_days,
             "extra-fields": "id,eventid,rankscore",
-            "token":   crypto_news_api_key,
+            # "searchOR":     self.search_str,
+            "date":         "last15min",
+            "token":        crypto_news_api_key,
         }
 
         # Get CryptoNews Response:
@@ -124,6 +127,9 @@ class CryptoNewsResponse():
         print(json.dumps(self.response, indent=4, sort_keys=True))
     
     def to_csv(self, mode="a", suffix=""):
+        if len(self.dataframe) == 0:
+            return
+
         self.__catch_value_error(mode, "mode", [opt for opt in self.SAVE_CSV_OPTIONS if opt])
 
         # Set to data archive domain: os.path.join(os.getcwd(), "data")
