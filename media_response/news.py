@@ -81,6 +81,7 @@ class CryptoNewsResponse():
 
         parameters = {
             "tickers":      self.ticker if isinstance(self.ticker, str) else ",".join(self.ticker),
+            "fallback":     "true",
             "items":        self.items,
             "sortby":       "rank",
             "days":         self.rank_days,
