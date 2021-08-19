@@ -25,7 +25,7 @@ def write_df(df, date_var):
 
 
 if __name__ == "__main__":
-    date_var       = "<PUT_DATE_HERE_FOR_MANUAL_RUN>"
+    date_var       = "20210818"
     crypto_news_df = data_pull(date_var)
 
     write_df(crypto_news_df, date_var)

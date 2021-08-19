@@ -39,7 +39,7 @@ def write_df(df, date_var):
 
 
 if __name__ == "__main__":
-    date_var  = "20210813"
+    date_var  = "20210818"
     crypto_df = data_pull(date_var)
 
     write_df(crypto_df, date_var)

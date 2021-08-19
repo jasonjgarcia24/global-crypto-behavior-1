@@ -17,6 +17,7 @@ def merge_df(stats_df, news_df):
     news_df  = news_df.drop_duplicates()
     news_df  = news_df[news_df["tickers"].notna()]
     
+    breakpoint()
     stats_df[STATS_TIME_COL] = pd.to_datetime(stats_df[STATS_TIME_COL], infer_datetime_format=True, utc=True).round("H")
     news_df[NEWS_TIME_COL]   = pd.to_datetime(news_df[ NEWS_TIME_COL],  infer_datetime_format=True, utc=True).round("H")
 

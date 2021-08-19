@@ -1,5 +1,6 @@
 import os
 import json
+import re
 
 import pandas as pd
 
@@ -13,32 +14,48 @@ from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 
 class CryptoNewsResponse():
     ARCHIVE_FILES = {
-        "ticker-news":   "ticker-news_data.csv",
-        "ticker-events": "ticker-events_data.csv",
+        "ticker-news":        "ticker-news_data.csv",
+        "ticker-events":      "ticker-events_data.csv",
+        "ticker-category":    "ticker-category_data.csv",
+        "ticker-stats"   :    "ticker-stats.csv",
+        "ticker-top-mention": "ticker-top-mention.csv",
     }
 
-    RUN_TYPE_OPTIONS = ["TICKER-NEWS", "TICKER-EVENTS", "DEBUG"]
+    RUN_TYPE_OPTIONS = [
+        "TICKER-NEWS",
+        "TICKER-EVENTS",
+        "TICKER-CATEGORY",
+        "TICKER-STATS",
+        "TICKER-TOP-MENTION",
+        "DEBUG",
+        ]
+
     SAVE_CSV_OPTIONS = [None, "a", "w"]
 
     DOMAIN_SWITCH = {
-        "TICKER-NEWS":   "https://cryptonews-api.com/api/v1",
-        "TICKER-EVENTS": "https://cryptonews-api.com/api/v1/events",
-        "DEBUG":         os.path.join(os.getcwd(), "data"),
+        "TICKER-NEWS":        "https://cryptonews-api.com/api/v1",
+        "TICKER-EVENTS":      "https://cryptonews-api.com/api/v1/events",
+        "TICKER-CATEGORY":    "https://cryptonews-api.com/api/v1/category",
+        "TICKER-STATS":       "https://cryptonews-api.com/api/v1/stat",
+        "TICKER-TOP-MENTION": "https://cryptonews-api.com/api/v1/top-mention",
+        "DEBUG":              os.path.join(os.getcwd(), "data"),
     }
 
-    def __init__(self, ticker: str, endpoint: str, items=2, rank_days=1, search_str="",
+    def __init__(self, ticker: str, endpoint: str, date="today", time="0000", items=2, rank_days=1, search_str="",
                  run_type="TICKER-EVENTS", save_csv=None):
 
         self.__catch_value_error(run_type, "run_type", self.RUN_TYPE_OPTIONS)
         self.__catch_value_error(save_csv, "save_csv", self.SAVE_CSV_OPTIONS)
 
         self.ticker     = ticker
+        self.date       = date
+        self.time       = time
         self.items      = items
         self.rank_days  = rank_days
         self.search_str = search_str
         self.__run_type = run_type
         self.save_csv   = save_csv
-        self.__set_endpoint(endpoint)
+        self.__endpoint = endpoint
         self.request()
 
     @property
@@ -49,7 +66,7 @@ class CryptoNewsResponse():
         prefix       = run_type.lower()
 
         run_type = self.__run_type
-        if run_type.upper() in ["TICKER-NEWS", "TICKER-EVENTS"]:
+        if run_type.upper() not in ["DEBUG",]:
             return domain
         else:
             endpoint = f"{prefix}_{self.ARCHIVE_FILES[endpoint_tag]}"
@@ -64,9 +81,6 @@ class CryptoNewsResponse():
             return None
         else:
             return self.dataframe
-
-    def __set_endpoint(self, endpoint_tag):
-        self.__endpoint = endpoint_tag
     
     def request(self):
         # Using the Python requests library, make an API call to access Crypto News
@@ -74,6 +88,7 @@ class CryptoNewsResponse():
 
         print(f"Source   : {self.url}")
         print(f"RUN TYPE : {self.__run_type.upper()}")
+        print(f"TICKER   : {self.ticker}")
 
         # Set request credentialsa and params
         load_dotenv()
@@ -81,22 +96,36 @@ class CryptoNewsResponse():
 
         parameters = {
             "tickers":      self.ticker if isinstance(self.ticker, str) else ",".join(self.ticker),
-            "fallback":     "true",
+            "section":      "alltickers",
             "items":        self.items,
-            "sortby":       "rank",
-            "days":         self.rank_days,
+            # "sortby":       "rank",
+            # "days":         self.rank_days,
             "extra-fields": "id,eventid,rankscore",
             # "searchOR":     self.search_str,
-            "date":         "last15min",
+            "date":         self.date,
+            "time":         self.time,
+            # "page":         "2",
+            "fallback":     "true",
+            "cache":        "false",
             "token":        crypto_news_api_key,
         }
+        
+        # Set url request
+        session_get_switch = {
+            "ticker-stats":       lambda : session.get(self.url, params={k: parameters[k] for k in ["tickers", "date", "token"]}),
+            "ticker-top-mention": lambda : session.get(self.url, params={k: parameters[k] for k in ["tickers", "date", "cache", "token"]}),
+            # "latest-listings": lambda : session.get(self.url, params={k: parameters[k] for k in ["start", "date", "convert"]}),
+            # "latest-quotes":   lambda : session.get(self.url, params={k: parameters[k] for k in ["id"]})
+        }
+
+        endpoint_tag = self.__endpoint
 
         # Get CryptoNews Response:
-        if self.__run_type.upper() in ["TICKER-NEWS", "TICKER-EVENTS"]:
+        if self.__run_type.upper() not in ["DEBUG",]:
             session = Session()
-
             try:
-                response = session.get(self.url, params=parameters)
+                # response = session.get(self.url, params=parameters)
+                response = session_get_switch.get(endpoint_tag)()
                 self.__response = json.loads(response.text)
             except (ConnectionError, Timeout, TooManyRedirects) as e:
                 print(e)
@@ -108,14 +137,71 @@ class CryptoNewsResponse():
             self.dataframe = pd.read_csv(Path(self.url))
 
         # Save dataframe to csv.
-        if self.save_csv:
+        if self.save_csv and self.dataframe:
             self.to_csv(mode=self.save_csv, suffix="auto")
         
     def json_to_dataframe(self):
-        if not self.response:
+        endpoint_tag = self.__endpoint
+        response     = self.response
+
+        if not isinstance(response["data"], dict):
             return None
-        else:        
-            return pd.DataFrame(self.response["data"])
+
+        switch_set_df = {
+            "ticker-news":        lambda r: pd.DataFrame(r),
+            "ticker-events":      lambda r: pd.DataFrame(r),
+            "ticker-category":    lambda r: pd.DataFrame(r),
+            "ticker-stats":       lambda r: self.__parse_ticker_stats(),
+            "ticker-top-mention": lambda r: self.__parse_ticker_top_mention(),
+        }
+        
+        return switch_set_df.get(endpoint_tag)(response)
+
+    def __parse_ticker_stats(self):
+        tickers  = self.ticker
+        dates    = self.__date_relative_to_explicit(self.date)
+        response = self.response
+
+        data_list = []
+        for date in response["data"].keys():
+            for ticker in response["data"][date]:
+                descr_dict = {"date": date, "ticker": ticker}
+
+                data_list.append({
+                    **{**response["data"][date][ticker], **descr_dict},
+                    **response["total"][ticker],
+                    })
+
+        df = pd.DataFrame(data_list)       
+
+        return df
+
+    def __parse_ticker_top_mention(self):
+        response = self.response
+
+        df = pd.DataFrame(response["data"]["all"])
+        df["from_date"], df["to_date"] = self.date.split("-")
+
+        return df
+
+    @staticmethod
+    def __date_relative_to_explicit(date_str):
+        if "last" in date_str:
+            span  = re.match("last([0-9]+)days", date_str)
+            span  = span.groups()[0]
+            dates = list(pd.date_range(end=datetime.today(), periods=int(span)-1))
+            dates = [d.strftime("%Y-%m-%d") for d in dates]
+        elif re.fullmatch("[0-9]+-[0-9]+", str):
+            s, e  = str.split("-")
+            s = pd.to_datetime(s, format="%m%d%Y")
+            e = pd.to_datetime(e, format="%m%d%Y")
+
+            dates = pd.date_range(start=s, end=e, freq="D")
+            dates = [d.strftime("%Y-%m-%d") for d in dates] 
+        elif date_str == "today":
+            dates = datetime.today().date().strftime("%Y-%m-%d")
+
+        return dates
 
     def merge_df_responses(self, filename):
         df_new    = self.dataframe
@@ -128,7 +214,7 @@ class CryptoNewsResponse():
         print(json.dumps(self.response, indent=4, sort_keys=True))
     
     def to_csv(self, mode="a", suffix=""):
-        if len(self.dataframe) == 0:
+        if not isinstance(self.dataframe, pd.DataFrame):
             return
 
         self.__catch_value_error(mode, "mode", [opt for opt in self.SAVE_CSV_OPTIONS if opt])
