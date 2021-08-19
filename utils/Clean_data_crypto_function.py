@@ -28,8 +28,6 @@ def data_pull(date_var):
                             'quote.USD.fully_diluted_market_cap',
                             'is_fiat',
                             'platform',
-                            'quote.USD.volume_24h',
-                            'quote.USD.price',
                             'date_added'])
     return data_crypto_df
 
@@ -39,8 +37,9 @@ def write_df(df, date_var):
 
 
 if __name__ == "__main__":
-    date_var  = "20210818"
-    crypto_df = data_pull(date_var)
+    for d in ["13", "14", "15", "16", "17", "18"]:
+        date_var  = f"202108{d}"
+        crypto_df = data_pull(date_var)
 
-    write_df(crypto_df, date_var)
+        write_df(crypto_df, date_var)
 
