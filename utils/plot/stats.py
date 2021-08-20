@@ -9,16 +9,21 @@ def stats_bar(df):
     df["sentiment_score"].name = "this_sentiment_score"
 
     df.columns = [str(col.lower()).replace(" ", "_") for col in df.columns]
-    df[      "mentions"] = df.loc[:, [      "positive",       "negative",       "neutral"]].sum(axis=1)
-    df["total_mentions"] = df.loc[:, ["total_positive", "total_negative", "total_neutral"]].sum(axis=1)
+    df["mentions"] = df.loc[:, ["positive", "negative", "neutral"]].sum(axis=1)
+
+    for ticker in df["ticker"].unique():
+        df.loc[df["ticker"]==ticker, "total_mentions"] = df.loc[df["ticker"]==ticker, "mentions"].sum()
+        df.loc[df["ticker"]==ticker, "total_positive"] = df.loc[df["ticker"]==ticker, "positive"].sum()
+        df.loc[df["ticker"]==ticker, "total_negative"] = df.loc[df["ticker"]==ticker, "negative"].sum()
+        df.loc[df["ticker"]==ticker, "total_neutral"]  = df.loc[df["ticker"]==ticker, "neutral" ].sum()
 
     df = df.sort_values(["ticker", "date"], ascending=True)
     customdata, hovertemplate = get_custom_data(df)
 
     fig = go.Figure([
-        create_bar_trace(df["total_positive"], df["ticker"], "Positive Mentions", customdata=customdata, hovertemplate=hovertemplate),
-        create_bar_trace(df["total_negative"], df["ticker"], "Negative Mentions", customdata=customdata, hovertemplate=hovertemplate),
-        create_bar_trace(df["total_neutral"],  df["ticker"], "Neutral Mentions",  customdata=customdata, hovertemplate=hovertemplate),
+        create_bar_trace(df["positive"], df["ticker"], "Positive Mentions", customdata=customdata, hovertemplate=hovertemplate),
+        create_bar_trace(df["negative"], df["ticker"], "Negative Mentions", customdata=customdata, hovertemplate=hovertemplate),
+        create_bar_trace(df["neutral"],  df["ticker"], "Neutral Mentions",  customdata=customdata, hovertemplate=hovertemplate),
     ])
 
     set_layout(df, fig)
