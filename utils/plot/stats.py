@@ -103,29 +103,36 @@ def set_layout(df, fig):
     )
 
     margin = go.layout.Margin(
-        l=50,
-        r=50,
-        b=100,
+        l=20,
+        r=20,
+        b=20,
         t=65,
         pad=4
     )
 
     fig.update_layout(
-        title=f"<b>Overal Daily Sentiment - {date}</b><br>Global Media",
+        title={
+            "text": f"<b>Overal Daily Sentiment - {date}</b><br>Global Media",
+            "font": dict(size=13),
+        },
         barmode="stack",
-        width=850,
-        height=600,
         margin=margin,
         legend=legend,
         xaxis=dict(tickmode='linear'), #Needed to ensure all xticks are shown.
     )
 
     fig.update_xaxes(
-        title_text="Tickers", 
+        title={
+            "text": "<i>Tickers</i>",
+            "font": dict(size=12),
+        }
     )
 
     fig.update_yaxes(
-        title_text="Mentions", 
+        title={
+            "text": "<i>Mentions</i>",
+            "font": dict(size=12),
+        }
     );
 
 
