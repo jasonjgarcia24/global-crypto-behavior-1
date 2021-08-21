@@ -15,7 +15,7 @@ def data_pull(date_var):
 
     data_crypto_news["date"] = pd.to_datetime(data_crypto_news["date"],infer_datetime_format=True, utc=True)
     data_crypto_news = data_crypto_news.drop_duplicates()
-    data_crypto_news = data_crypto_news.drop(columns= ['image_url','type','news_id','eventid'])
+    data_crypto_news = data_crypto_news.drop(columns= ['type','news_id','eventid'])
 
     return data_crypto_news
 
@@ -25,8 +25,9 @@ def write_df(df, date_var):
 
 
 if __name__ == "__main__":
-    date_var       = "20210818"
-    crypto_news_df = data_pull(date_var)
+    for d in range(20,21):
+        date_var       = f"202108{d}"
+        crypto_news_df = data_pull(date_var)
 
-    write_df(crypto_news_df, date_var)
+        write_df(crypto_news_df, date_var)
     

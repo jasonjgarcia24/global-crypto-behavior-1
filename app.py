@@ -1,4 +1,5 @@
-import pandas as pd
+import pandas   as pd
+import datetime as DT
 
 from datetime import datetime
 
@@ -34,41 +35,38 @@ crypto_data = CoinMarketCapResponse(tickers, slugs, id, coins, currency, cmc_end
 crypto_df = crypto_data.dataframe
 
 # CRYPTO NEWS SECTION
-items         = 50              # Pull 50 articles.
-rank_days     = 3 #1               # Will sort by rank for the last X days.
-# news_endpoint = "ticker-news"   # Define the type of data to collect (ARCHIVE_FILES).
-# news_endpoint = "ticker-category"   # Define the type of data to collect (ARCHIVE_FILES).
-# news_endpoint = "ticker-stats"   # Define the type of data to collect (ARCHIVE_FILES).
-news_endpoint = "ticker-top-mention"   # Define the type of data to collect (ARCHIVE_FILES).
-search_str    = location()
+items         = 50               # Pull 50 articles.
+rank_days     = 3                # Will sort by rank for the last X days.
+news_endpoint = "ticker-news"    # Define the type of data to collect (ARCHIVE_FILES).
+run_type = "TICKER-NEWS"         # !!! Uses Cryptonews API key and credit. Are you SURE???
 
-# run_type = "TICKER-NEWS"       # !!! Uses Cryptonews API key and credit. Are you SURE???
-# run_type = "TICKER-EVENTS"     # !!! Uses Cryptonews API key and credit. Are you SURE???
-# run_type = "TICKER-CATEGORY"   # !!! Uses Cryptonews API key and credit. Are you SURE???
-# run_type = "TICKER-STATS"      # !!! Uses Cryptonews API key and credit. Are you SURE???
-run_type = "TICKER-TOP-MENTION"    # !!! Uses Cryptonews API key and credit. Are you SURE???
-# run_type = "DEBUG"             #   Uses ../data/debug_<endpoint>_data.csv (we want this for testing).
+time_formatter = lambda t: t.strftime("%Y%m%d")
+today = DT.datetime.now()
 
-# freq       = "D"
-# date_start = pd.date_range(start="13-Aug-2021 00:00:00", end="17-Aug-2021 18:00:00", freq=freq)
-# date_end   = pd.date_range(start="13-Aug-2021 23:59:59", end="17-Aug-2021 23:59:59", freq=freq)
-# date_start = pd.date_range(start="13-Aug-2021 00:00:00", end="17-Aug-2021 18:00:00", freq=freq)
-# date_end   = pd.date_range(start="13-Aug-2021 05:59:59", end="17-Aug-2021 23:59:59", freq=freq)
+collection_switch = {
+    ("ticker-top-mention", "TICKER-TOP-MENTION"): {
+        "date": f"{time_formatter(today-DT.timedelta(days=7))}-{time_formatter(today)}",
+        "run_type": "TIKER-MENTION",
+        "save_csv": None,
+        },
+    ("ticker-stats", "TICKER-STATS"): {
+        "date": "last7days",
+        "run_type": "TICKER-STATS",
+        "save_csv": None,
+        },
+    ("ticker-news", "TICKER-NEWS"): {
+        "date": "20210814",
+        "items": 50,
+        "rank_days": 1,
+        "run_type": "TICKER-NEWS",
+        "save_csv": None,
+        },
+}
 
-# dates  = [f"{s}-{e}" for s, e in zip(date_start.strftime('%Y%m%d'), date_end.strftime('%Y%m%d'))]
-# times  = [f"{s}-{e}" for s, e in zip(date_start.strftime('%H%M%S'), date_end.strftime('%H%M%S'))]
-# suffix = "last7days" #datetime.today().strftime("%Y%m%d") #f"{dates[0][:8]}-{dates[-1][:8]}"
-dates  = ["08142021",]
+# Collect news:
+collection = collection_switch.get((news_endpoint, run_type))
+news_data  = CryptoNewsResponse(tickers, news_endpoint, **collection)
+suffix     = collection["date"]
 
-news_df = pd.DataFrame()
-# for ticker in tickers:
-for date in dates:
-    print(f"{dates=}")
-    suffix    = pd.to_datetime(date, format="%m%d%Y").strftime("%Y%m%d")
-    news_data = CryptoNewsResponse(tickers, news_endpoint, date=f"{date}-{date}", items=items, rank_days=rank_days, run_type=run_type, search_str=search_str)
-    news_df   = pd.concat([news_df, news_data.dataframe])
+news_data.to_csv(mode="a", suffix=suffix)
 
-    news_data.to_csv(mode="a", suffix=suffix)
-
-breakpoint()
-    

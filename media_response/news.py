@@ -41,7 +41,7 @@ class CryptoNewsResponse():
         "DEBUG":              os.path.join(os.getcwd(), "data"),
     }
 
-    def __init__(self, ticker: str, endpoint: str, date="today", time="0000", items=2, rank_days=1, search_str="",
+    def __init__(self, ticker: str, endpoint: str, date="today", time="0000", items=50, rank_days=1, search_str="",
                  run_type="TICKER-EVENTS", save_csv=None):
 
         self.__catch_value_error(run_type, "run_type", self.RUN_TYPE_OPTIONS)
@@ -98,13 +98,13 @@ class CryptoNewsResponse():
             "tickers":      self.ticker if isinstance(self.ticker, str) else ",".join(self.ticker),
             "section":      "alltickers",
             "items":        self.items,
-            # "sortby":       "rank",
-            # "days":         self.rank_days,
+            "sortby":       "rank",
+            "days":         self.rank_days,
             "extra-fields": "id,eventid,rankscore",
-            # "searchOR":     self.search_str,
+            "searchOR":     self.search_str,
             "date":         self.date,
             "time":         self.time,
-            # "page":         "2",
+            "page":         "2",
             "fallback":     "true",
             "cache":        "false",
             "token":        crypto_news_api_key,
@@ -114,8 +114,7 @@ class CryptoNewsResponse():
         session_get_switch = {
             "ticker-stats":       lambda : session.get(self.url, params={k: parameters[k] for k in ["tickers", "date", "token"]}),
             "ticker-top-mention": lambda : session.get(self.url, params={k: parameters[k] for k in ["tickers", "date", "cache", "token"]}),
-            # "latest-listings": lambda : session.get(self.url, params={k: parameters[k] for k in ["start", "date", "convert"]}),
-            # "latest-quotes":   lambda : session.get(self.url, params={k: parameters[k] for k in ["id"]})
+            "ticker-news":        lambda : session.get(self.url, params={k: parameters[k] for k in ["tickers", "items", "sortby", "days", "token"]}),
         }
 
         endpoint_tag = self.__endpoint
@@ -144,11 +143,11 @@ class CryptoNewsResponse():
         endpoint_tag = self.__endpoint
         response     = self.response
 
-        if not isinstance(response["data"], dict):
+        if not isinstance(response["data"], (dict, list)):
             return None
 
         switch_set_df = {
-            "ticker-news":        lambda r: pd.DataFrame(r),
+            "ticker-news":        lambda r: pd.DataFrame(r["data"]),
             "ticker-events":      lambda r: pd.DataFrame(r),
             "ticker-category":    lambda r: pd.DataFrame(r),
             "ticker-stats":       lambda r: self.__parse_ticker_stats(),
