@@ -1,6 +1,3 @@
-# global-crypto-behavior
-# global-crypto-behavior
-A global visualization of crypto asset behavior by region.
 # Global-Crypto-Behavior-Index
 ***
 ## <a id="Contents">Cotents</a>
