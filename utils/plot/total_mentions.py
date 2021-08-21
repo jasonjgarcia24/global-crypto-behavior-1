@@ -8,7 +8,10 @@ from pathlib import Path
 def mentions_bar(df, tickers=[]):
     df         = df[df["ticker"].isin(tickers)]
     df         = df.sort_values("ticker", ascending=True)
-    df.columns = [str(col.lower()).replace(" ", "_") for col in df.columns]
+
+    df["from_date"] = pd.to_datetime(df["from_date"], format="%m%d%Y").dt.strftime("%d-%b-%Y")
+    df["to_date"]   = pd.to_datetime(df["to_date"],   format="%m%d%Y").dt.strftime("%d-%b-%Y")
+    df.columns      = [str(col.lower()).replace(" ", "_") for col in df.columns]
 
     customdata, hovertemplate = get_custom_data(df)
 
@@ -30,28 +33,30 @@ def get_custom_data(df):
     # Organize custom data for a rate change bar chart
     custom_data = np.stack((
         df["name"],                                           #0
-
-        df['total_mentions'],                                 #1
-        df['positive_mentions'],                              #2
-        df['negative_mentions'],                              #3
-        df['neutral_mentions'],                               #4
         
-        [ordinal(n) for n in rank_dict["total_mentions"]],    #5
-        [ordinal(n) for n in rank_dict["positive_mentions"]], #6
-        [ordinal(n) for n in rank_dict["negative_mentions"]], #7
-        [ordinal(n) for n in rank_dict["neutral_mentions"]],  #8
+        df["from_date"],                                      #1
+        df['total_mentions'],                                 #2
+        df['positive_mentions'],                              #3
+        df['negative_mentions'],                              #4
+        df['neutral_mentions'],                               #5
         
-        df["sentiment_score"],                                #9
-        [ordinal(n) for n in rank_dict["sentiment_score"]],   #10
+        [ordinal(n) for n in rank_dict["total_mentions"]],    #6
+        [ordinal(n) for n in rank_dict["positive_mentions"]], #7
+        [ordinal(n) for n in rank_dict["negative_mentions"]], #8
+        [ordinal(n) for n in rank_dict["neutral_mentions"]],  #9
+        
+        df["sentiment_score"],                                #10
+        [ordinal(n) for n in rank_dict["sentiment_score"]],   #11
     ), axis=-1)
 
     hover_template = """
     <b>%{customdata[0]} (%{x})</b><br><br>
-    Total Mentions: %{customdata[1]:d} (%{customdata[5]})<br>
-    Positive Mentions: %{customdata[2]:d} (%{customdata[6]})<br>
-    Negative Mentions: %{customdata[3]:d} (%{customdata[7]})<br>
-    Neutral Mentions: %{customdata[4]:d} (%{customdata[8]})<br>
-    Sentiment Score: %{customdata[9]:.2f} (%{customdata[10]})<br>
+    <b>%{customdata[1]}:</b><br>
+    Total Mentions: %{customdata[2]:d} (%{customdata[6]})<br>
+    Positive Mentions: %{customdata[3]:d} (%{customdata[7]})<br>
+    Negative Mentions: %{customdata[4]:d} (%{customdata[8]})<br>
+    Neutral Mentions: %{customdata[5]:d} (%{customdata[9]})<br>
+    Sentiment Score: %{customdata[10]:.2f} (%{customdata[11]})<br>
     <extra></extra>
     """
 
@@ -110,9 +115,7 @@ def set_layout(df, fig):
 
 
 def parse_date(df):
-    date_range = list(set([df.loc[:,"from_date"].min(), df.loc[:,"to_date"].max()]))
-    date_strs  = list(pd.to_datetime(date_range, format="%m%d%Y").strftime("%d-%b-%Y"))
-
+    date_strs = list(set([df.loc[:,"from_date"].min(), df.loc[:,"to_date"].max()]))
     return " to ".join(date_strs)
 
 
