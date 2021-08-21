@@ -41,7 +41,7 @@ class CryptoNewsResponse():
         "DEBUG":              os.path.join(os.getcwd(), "data"),
     }
 
-    def __init__(self, ticker: str, endpoint: str, date="today", time="0000", items=50, rank_days=1, search_str="",
+    def __init__(self, ticker: str, endpoint: str, date="today", time="0000", items=50, page=1, rank_days=1, search_str="",
                  run_type="TICKER-EVENTS", save_csv=None):
 
         self.__catch_value_error(run_type, "run_type", self.RUN_TYPE_OPTIONS)
@@ -51,6 +51,7 @@ class CryptoNewsResponse():
         self.date       = date
         self.time       = time
         self.items      = items
+        self.page       = page
         self.rank_days  = rank_days
         self.search_str = search_str
         self.__run_type = run_type
@@ -104,7 +105,7 @@ class CryptoNewsResponse():
             "searchOR":     self.search_str,
             "date":         self.date,
             "time":         self.time,
-            "page":         "2",
+            "page":         self.page,
             "fallback":     "true",
             "cache":        "false",
             "token":        crypto_news_api_key,
@@ -114,7 +115,7 @@ class CryptoNewsResponse():
         session_get_switch = {
             "ticker-stats":       lambda : session.get(self.url, params={k: parameters[k] for k in ["tickers", "date", "token"]}),
             "ticker-top-mention": lambda : session.get(self.url, params={k: parameters[k] for k in ["tickers", "date", "cache", "token"]}),
-            "ticker-news":        lambda : session.get(self.url, params={k: parameters[k] for k in ["tickers", "items", "sortby", "days", "token"]}),
+            "ticker-news":        lambda : session.get(self.url, params={k: parameters[k] for k in ["tickers", "items", "sortby", "extra-fields", "page", "days", "token"]}),
         }
 
         endpoint_tag = self.__endpoint

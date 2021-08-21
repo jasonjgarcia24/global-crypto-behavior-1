@@ -25,7 +25,7 @@ def write_df(df, date_var):
 
 
 if __name__ == "__main__":
-    for d in range(20,21):
+    for d in range(14, 22):
         date_var       = f"202108{d}"
         crypto_news_df = data_pull(date_var)
 
