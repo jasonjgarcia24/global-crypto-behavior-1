@@ -1,0 +1,65 @@
+.
+├── .env
+├── app.py
+├── cmc_runner.bat
+├── data
+│   ├── debug_latest-quotes_data.csv
+│   ├── debug_ticker-news_data.csv
+│   ├── latest-quotes_data_ALL.csv
+│   ├── ticker-news_data_ALL.csv
+│   └── ticker-stats_last7days.csv
+├── gcb-index-lite.ipynb
+├── img
+│   ├── filmtocat.png
+│   └── presentation_imgs
+│       ├── data_collection
+│       │   ├── apis
+│       │   │   ├── crypto_news.png
+│       │   │   └── marketcap_image.png
+│       │   ├── latest_quote _data_ALL.png
+│       │   ├── ticker_stats.png
+│       │   └── top_mentions.png
+│       ├── misc
+│       │   ├── cloud_above_mtn.jpg
+│       │   └── steps3.jpg
+│       ├── slide_2
+│       │   └── positions
+│       │       ├── back_engineer
+│       │       │   └── bankEndEngineer_3.jpg
+│       │       ├── front_engineer
+│       │       │   └── leadFrontEngineer.jpg
+│       │       ├── project_coordinator
+│       │       │   └── projectCoordinator_3.jpg
+│       │       ├── project_lead
+│       │       │   └── projectLead.jpg
+│       │       └── visionary
+│       │           └── visionary1.jpg
+│       ├── slide_3
+│       │   └── GCB_index_candlestick.jpg
+│       └── slide_3b
+│           └── news
+│               ├── bitcoin.jpg
+│               ├── cardano.jpg
+│               ├── cryptocurrencies.jpg
+│               ├── dogecoin.jpg
+│               ├── ethereum.jpg
+│               └── litecoin.jpg
+├── LICENSE
+├── market_response
+│   └── crypto.py
+├── media_response
+│   └── news.py
+├── README.md
+├── requirements.txt
+├── tree.txt
+└── utils
+    ├── Clean_data_crypto_function.py
+    ├── Clean_news_function.py
+    ├── data_cleaning.py
+    ├── json_io.py
+    ├── merge_crypto_sources.py
+    ├── plot
+    │   ├── stats.py
+    │   └── total_mentions.py
+    ├── search_string.py
+    └── timezone.py
