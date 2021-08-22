@@ -53,7 +53,7 @@ To run the gcb-index-lite WebApp, in a terminal in the project's base directory,
  - <a href="https://github.com/wdolesin" title="https://github.com/wdolesin" target="_blank">William Olesinski</a>
 
 ## <a id="License">License</a>
-Each file included in this repository is licensed under the <a href="https://github.com/Fintech-Collaboration/global-crypto-behavior/blob/main/LICENSE" title="LICENSE">MIT License.</a>
+Each file included in this repository is licensed under the <a href="https://github.com/Fintech-Collaboration/global-crypto-behavior/blob/a421d91abfc34f96b1f85b34095d28631a427e89/LICENSE" title="LICENSE">MIT License.</a>
 
 ***
 [Top of Page](#Top-of-Page)<br>
