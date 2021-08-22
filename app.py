@@ -29,10 +29,10 @@ today        = datetime.now().strftime("%Y%m%d")
 # run_type = "SANDBOX"            # Uses CMC sandbox and no credit.
 run_type = "DEBUG"              # Uses ../data/debug_<endpoint>_data.csv (we want this for testing).
 
-# crypto_data = CoinMarketCapResponse(tickers, slugs, id, coins, currency, cmc_endpoint, run_type=run_type)
-# crypto_data.to_csv(mode="a", suffix=today)
+crypto_data = CoinMarketCapResponse(tickers, slugs, id, coins, currency, cmc_endpoint, run_type=run_type)
+crypto_data.to_csv(mode="a", suffix=today)
 
-# crypto_df = crypto_data.dataframe
+crypto_df = crypto_data.dataframe
 
 # CRYPTO NEWS SECTION
 items         = 50               # Pull 50 articles.
