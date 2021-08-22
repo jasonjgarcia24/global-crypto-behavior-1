@@ -1,7 +1,0 @@
-total_pages,Total_Positive,Total_Negative,Total_Neutral,Sentiment_Score,Neutral,Positive,Negative,sentiment_score,date,ticker
-1,35,14,21,0.75,21,35,14,0.75,2021-08-16,BTC
-1,29,5,23,1.035,23,29,5,1.035,2021-08-16,ETH
-1,8,7,7,0.386,7,8,7,0.386,2021-08-16,ADA
-1,2,0,1,1.333,1,2,0,1.333,2021-08-16,LTC
-1,0,2,1,-0.667,1,0,2,-0.667,2021-08-16,XMR
-1,28,1,11,1.288,11,28,1,1.288,2021-08-16,DOGE
